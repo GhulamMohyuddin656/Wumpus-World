@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Wumpus World</title>
+    <style>
+        body {
+            background-color: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { margin-bottom: 5px; }
+        #status { font-size: 24px; font-weight: bold; height: 30px; margin-bottom: 20px;}
+        
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(4, 150px);
+            grid-template-rows: repeat(4, 150px);
+            gap: 5px;
+            background-color: #444;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .cell {
+            background-color: #555;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: black;
+            text-shadow: 1px 1px 2px white;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .cell img {
+            max-width: 60%;
+            max-height: 60%;
+            position: absolute;
+        }
+        .fog {
+            background-image: url('/static/images/fog.png');
+            background-size: cover;
+            background-position: center;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+        }
+        /* Color coding */
+        .safe { background-color: #6aaa64; } /* Green */
+        .visited { background-color: #d3d3d3; } /* Light gray */
+        
+        .percept-text {
+            position: absolute;
+            bottom: 5px;
+            text-align: center;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Mars Rover: Wumpus World</h1>
+    <div id="status">Press any arrow key to Start</div>
+    <div id="grid"></div>
+
+    <script>
+        const gridEl = document.getElementById("grid");
+        const statusEl = document.getElementById("status");
+        let gameStarted = false;
+
+        // Listen for Arrow Keys
+        window.addEventListener("keydown", function(e) {
+            if(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+                e.preventDefault();
+                let dir = e.key.replace("Arrow", "").toLowerCase();
+                
+                if (!gameStarted) {
+                    gameStarted = true;
+                    fetchData('/start', {});
+                } else {
+                    fetchData('/move', { direction: dir });
+                }
+            }
+        });
+
+        function fetchData(route, payload) {
+            fetch(route, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => drawGrid(data));
+        }
+
+        function drawGrid(data) {
+            gridEl.innerHTML = "";
+            let size = data.grid_size;
+            
+            // Update Status text
+            if(data.status === "dead") statusEl.innerHTML = "<span style='color:red;'>You Died! (Refresh to restart)</span>";
+            else if(data.status === "won") statusEl.innerHTML = "<span style='color:gold;'>You Found the Gold! YOU WIN!</span>";
+            else statusEl.innerText = "Exploring... (Use Arrow Keys)";
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    let cellDiv = document.createElement("div");
+                    cellDiv.className = "cell";
+                    
+                    let isVisited = data.visited.some(v => v[0] === r && v[1] === c);
+                    let isSafe = data.safe_cells.some(v => v[0] === r && v[1] === c);
+                    let isRoverHere = (data.rover_pos[0] === r && data.rover_pos[1] === c);
+
+                    // Add Fog if unexplored
+                    if (!isVisited && data.status === "playing") {
+                        let fogDiv = document.createElement("div");
+                        fogDiv.className = "fog";
+                        cellDiv.appendChild(fogDiv);
+                    }
+
+                    // Background color for explored/safe
+                    if (isVisited) cellDiv.classList.add("visited");
+                    else if (isSafe) cellDiv.classList.add("safe");
+
+                    // Show Hazards if game is over
+                    if (data.status !== "playing" || isVisited) {
+                        let cellData = data.hazards[r][c];
+                        if (cellData.p) cellDiv.innerHTML += `<img src="/static/images/pit.png" style="z-index:1;">`;
+                        if (cellData.w) cellDiv.innerHTML += `<img src="/static/images/wumpus.png" style="z-index:2;">`;
+                        if (cellData.g) cellDiv.innerHTML += `<img src="/static/images/gold.png" style="z-index:3; top:10px;">`; // Pushed up slightly
+                        
+                        // Text overlays (under gold if gold is there)
+                        let textStr = "";
+                        if (cellData.b) textStr += "Breeze<br>";
+                        if (cellData.s) textStr += "Stench";
+                        if (textStr !== "") {
+                            cellDiv.innerHTML += `<div class="percept-text">${textStr}</div>`;
+                        }
+                    }
+
+                    // Draw Rover over everything else
+                    if (isRoverHere) {
+                        let roverImg = data.direction; // up, down, left, right
+                        cellDiv.innerHTML += `<img src="/static/images/marsrover_${roverImg}.png" style="z-index:20;">`;
+                    }
+
+                    gridEl.appendChild(cellDiv);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
