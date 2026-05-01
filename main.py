@@ -20,7 +20,12 @@ def index():
 
 @app.route('/start', methods=['POST'])
 def start_game():
+    # Grab the size from the frontend, default to 4 if missing
+    requested_size = request.json.get('size', 4)
+    game_state["size"] = int(requested_size)
     size = game_state["size"]
+    
+    # Generate the world dynamically with the new size
     game_state["world"] = WumpusWorld(size, size)
     game_state["agent"] = WumpusAgent(size, size)
     game_state["rover_r"] = 0
@@ -59,6 +64,7 @@ def process_turn():
     agent = game_state["agent"]
     r, c = game_state["rover_r"], game_state["rover_c"]
     
+    # Check exact cause of death or victory
     cell = world.grid[r][c]
     if cell["p"]: game_state["status"] = "dead_pit"
     elif cell["w"]: game_state["status"] = "dead_wumpus"
@@ -69,7 +75,7 @@ def process_turn():
     agent.tell('s', r, c, percepts["stench"])
     
     safe_cells = list(agent.safe_known)
-    confirmed_hazards = [] # NEW: Find hazards to highlight Red
+    confirmed_hazards = [] 
     
     for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
         nr, nc = r + dr, c + dc

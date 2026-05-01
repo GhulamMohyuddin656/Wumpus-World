@@ -178,6 +178,14 @@
             <div class="metric-title">Resolution Inference Steps</div>
             <div class="metric-value" id="val-inference">0</div>
         </div>
+
+        <div class="metric-box" style="border-left-color: #ec4899;">
+            <div class="metric-title">Grid Size (N x N)</div>
+            <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
+                <input type="number" id="grid-size-input" value="4" min="3" max="10" style="width: 60px; padding: 5px; border-radius: 4px; border: none; background: #334155; color: white; font-weight: bold; text-align: center;">
+                <button id="restart-btn" style="padding: 5px 15px; background-color: #38bdf8; border: none; border-radius: 4px; color: #0f172a; font-weight: bold; cursor: pointer; transition: 0.2s;">Restart</button>
+            </div>
+        </div>
         
         <div class="metric-title" style="margin-top: 10px;">Legend</div>
         <div style="font-size: 13px; display: flex; flex-direction: column; gap: 5px;">
@@ -211,6 +219,7 @@
             if (lastKnownData) animateRover(lastKnownData.rover_pos[0], lastKnownData.rover_pos[1], lastKnownData.direction);
         });
 
+        // Arrow Key Movement
         window.addEventListener("keydown", function(e) {
             if(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
                 e.preventDefault();
@@ -218,11 +227,30 @@
                 
                 if (!gameStarted) {
                     gameStarted = true;
-                    fetchData('/start', {});
+                    // Grab the custom size when starting via arrow key
+                    let sizeVal = parseInt(document.getElementById("grid-size-input").value) || 4;
+                    fetchData('/start', { size: sizeVal });
                 } else {
                     fetchData('/move', { direction: dir });
                 }
             }
+        });
+
+        // Dynamic Restart Button
+        document.getElementById("restart-btn").addEventListener("click", () => {
+            let sizeVal = parseInt(document.getElementById("grid-size-input").value) || 4;
+            
+            // Limit size between 3 and 10 to stop the browser from crashing
+            if(sizeVal < 3) sizeVal = 3;
+            if(sizeVal > 10) sizeVal = 10;
+            document.getElementById("grid-size-input").value = sizeVal;
+
+            gameStarted = true; 
+            gridBuilt = false; // Forces the HTML to delete and rebuild the grid cells
+            roverLayer.style.display = "none"; 
+            statusText.innerText = "Rebooting System...";
+            
+            fetchData('/start', { size: sizeVal });
         });
 
         function fetchData(route, payload) {
@@ -249,7 +277,7 @@
 
             // Update Dashboard Metrics
             valLocation.innerText = `[${data.rover_pos[0]}, ${data.rover_pos[1]}]`;
-            valInference.innerText = data.inference_steps.toLocaleString(); // Formats large numbers nicely
+            valInference.innerText = data.inference_steps.toLocaleString(); 
             
             let perceptList = [];
             if (data.percepts.breeze) perceptList.push("Breeze 💨");
@@ -257,8 +285,8 @@
             valPercepts.innerText = perceptList.length > 0 ? perceptList.join(", ") : "None";
 
             // Update Status Console
-            if (data.status === "dead_pit") statusText.innerHTML = "<span class='danger'>CRITICAL: Fell into a Pit! 🕳️ (Refresh)</span>";
-            else if (data.status === "dead_wumpus") statusText.innerHTML = "<span class='danger'>CRITICAL: Eaten by Wumpus! 👽 (Refresh)</span>";
+            if (data.status === "dead_pit") statusText.innerHTML = "<span class='danger'>CRITICAL: Fell into a Pit! 🕳️</span>";
+            else if (data.status === "dead_wumpus") statusText.innerHTML = "<span class='danger'>CRITICAL: Eaten by Wumpus! 👽</span>";
             else if (data.status === "won") statusText.innerHTML = "<span class='victory'>SUCCESS: Gold Acquired! 🏆 YOU WIN!</span>";
             else statusText.innerText = `System Online. Exploring...`;
 
