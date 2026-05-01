@@ -52,5 +52,5 @@ class WumpusWorld:
     def add_percept_to_neighbour(self,r,c,type):
         for dr,dc in [(0,1),(0,-1),(1,0),(-1,0)]:
             nr,nc=r+dr,c+dc
-            if 0<=nr<self.size and 0<=nr<self.size:
+            if 0<=nr<self.row and 0<=nc<self.col:
                 self.grid[nr][nc][type]=True
