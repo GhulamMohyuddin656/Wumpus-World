@@ -37,4 +37,13 @@ class WumpusAgent:
             self.kb.append({f"{type}{r}{c}"})
         else:
             self.kb.append({f"-{type}{r}{c}"})
-                
+    def resolve(self, ci, cj):
+        for literal in ci:
+            complement = literal[1:] if literal.startswith("-") else "-" + literal
+            if complement in cj:
+                # Found a match! Create a new combined clause
+                res = set(ci) | set(cj)
+                res.remove(literal)
+                res.remove(complement)
+                return frozenset(res)
+        return None
