@@ -9,9 +9,9 @@
             --bg-color: #0f172a;
             --panel-bg: #1e293b;
             --text-main: #f8fafc;
-            --color-unvisited: #64748b; /* GRAY per assignment */
-            --color-safe: #22c55e;      /* GREEN per assignment */
-            --color-hazard: #ef4444;    /* RED per assignment */
+            --color-unvisited: #64748b; 
+            --color-safe: #22c55e;      
+            --color-hazard: #ef4444;    
             --color-visited: #cbd5e1;
         }
 
@@ -29,7 +29,6 @@
             box-sizing: border-box;
         }
 
-        /* Metrics Dashboard Styling */
         #dashboard {
             background-color: var(--panel-bg);
             padding: 20px 30px;
@@ -59,19 +58,21 @@
         .danger { color: #f87171; }
         .victory { color: #fbbf24; }
 
-        /* Grid Container Styling for Dynamic Resizing */
         #game-container {
             position: relative;
             flex: 2 1 400px;
             max-width: 700px;
             width: 100%;
-            aspect-ratio: 1 / 1; 
+            /* Removed fixed aspect ratio so the grid can shape itself as a rectangle if needed */
             background-color: var(--panel-bg);
             padding: 15px;
             border-radius: 12px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             box-sizing: border-box;
             border: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #grid {
@@ -82,18 +83,18 @@
             position: relative;
         }
 
-        /* Cell Styling & Colors based on Assignment */
         .cell {
-            background-color: var(--color-unvisited); /* UNVISITED GRAY */
+            background-color: var(--color-unvisited); 
             position: relative;
             border-radius: 8px;
             overflow: hidden;
             box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
             transition: background-color 0.3s ease;
+            aspect-ratio: 1 / 1; /* Keep cells square even if grid is rectangular */
         }
 
-        .safe { background-color: var(--color-safe); } /* SAFE GREEN */
-        .hazard { background-color: var(--color-hazard) !important; } /* CONFIRMED RED */
+        .safe { background-color: var(--color-safe); } 
+        .hazard { background-color: var(--color-hazard) !important; } 
         .visited { background-color: var(--color-visited); }
 
         .fog {
@@ -130,7 +131,7 @@
             position: absolute;
             bottom: 4px;
             text-align: center;
-            font-size: clamp(10px, 1.5vw, 14px); /* Scales font dynamically */
+            font-size: clamp(9px, 1.2vw, 13px); 
             font-weight: bold;
             background-color: rgba(15, 23, 42, 0.9);
             color: #fff;
@@ -139,10 +140,10 @@
             z-index: 25;
         }
 
-        /* Floating Rover Layer */
         #rover-layer {
             position: absolute;
-            top: 15px; left: 15px; /* Offset to match container padding */
+            top: 0;   /* ADD THIS */
+            left: 0;  /* ADD THIS */
             z-index: 20; 
             transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); 
             display: none; 
@@ -156,13 +157,18 @@
             top: 5%; left: 5%;
             filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
         }
+        
+        .input-box {
+            width: 45px; padding: 5px; border-radius: 4px; border: none; 
+            background: #334155; color: white; font-weight: bold; text-align: center;
+        }
     </style>
 </head>
 <body>
 
     <div id="dashboard">
         <h1>Wumpus Agent</h1>
-        <div id="status-text">Awaiting Init... (Press Arrow Key)</div>
+        <div id="status-text">Awaiting Init...</div>
         
         <div class="metric-box">
             <div class="metric-title">Agent Location</div>
@@ -180,17 +186,19 @@
         </div>
 
         <div class="metric-box" style="border-left-color: #ec4899;">
-            <div class="metric-title">Grid Size (N x N)</div>
-            <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
-                <input type="number" id="grid-size-input" value="4" min="3" max="10" style="width: 60px; padding: 5px; border-radius: 4px; border: none; background: #334155; color: white; font-weight: bold; text-align: center;">
-                <button id="restart-btn" style="padding: 5px 15px; background-color: #38bdf8; border: none; border-radius: 4px; color: #0f172a; font-weight: bold; cursor: pointer; transition: 0.2s;">Restart</button>
+            <div class="metric-title">Grid Size (Rows × Cols)</div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-top: 5px;">
+                <input type="number" id="grid-rows" class="input-box" value="4" min="3" max="10" title="Rows">
+                <span style="font-weight:bold; color:#94a3b8;">×</span>
+                <input type="number" id="grid-cols" class="input-box" value="4" min="3" max="10" title="Columns">
+                <button id="restart-btn" style="margin-left:auto; padding: 5px 15px; background-color: #38bdf8; border: none; border-radius: 4px; color: #0f172a; font-weight: bold; cursor: pointer;">Start</button>
             </div>
         </div>
         
         <div class="metric-title" style="margin-top: 10px;">Legend</div>
         <div style="font-size: 13px; display: flex; flex-direction: column; gap: 5px;">
             <div><span style="display:inline-block; width:12px; height:12px; background:var(--color-safe); border-radius:3px;"></span> Safe</div>
-            <div><span style="display:inline-block; width:12px; height:12px; background:var(--color-unvisited); border-radius:3px;"></span> Unvisited / Unknown</div>
+            <div><span style="display:inline-block; width:12px; height:12px; background:var(--color-unvisited); border-radius:3px;"></span> Unvisited</div>
             <div><span style="display:inline-block; width:12px; height:12px; background:var(--color-hazard); border-radius:3px;"></span> Confirmed Hazard</div>
         </div>
     </div>
@@ -214,44 +222,39 @@
         let gridBuilt = false;
         let lastKnownData = null;
 
-        // Dynamic resizing correction for Rover
         window.addEventListener('resize', () => {
             if (lastKnownData) animateRover(lastKnownData.rover_pos[0], lastKnownData.rover_pos[1], lastKnownData.direction);
         });
 
-        // Arrow Key Movement
+        // Start Game payload helper
+        function sendStartRequest() {
+            let rVal = parseInt(document.getElementById("grid-rows").value) || 4;
+            let cVal = parseInt(document.getElementById("grid-cols").value) || 4;
+            
+            if(rVal < 3) rVal = 3; if(rVal > 10) rVal = 10;
+            if(cVal < 3) cVal = 3; if(cVal > 10) cVal = 10;
+            
+            document.getElementById("grid-rows").value = rVal;
+            document.getElementById("grid-cols").value = cVal;
+
+            gameStarted = true; 
+            gridBuilt = false; 
+            roverLayer.style.display = "none"; 
+            statusText.innerText = "Rebooting System...";
+            
+            fetchData('/start', { rows: rVal, cols: cVal });
+        }
+
         window.addEventListener("keydown", function(e) {
             if(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
                 e.preventDefault();
                 let dir = e.key.replace("Arrow", "").toLowerCase();
-                
-                if (!gameStarted) {
-                    gameStarted = true;
-                    // Grab the custom size when starting via arrow key
-                    let sizeVal = parseInt(document.getElementById("grid-size-input").value) || 4;
-                    fetchData('/start', { size: sizeVal });
-                } else {
-                    fetchData('/move', { direction: dir });
-                }
+                if (!gameStarted) { sendStartRequest(); } 
+                else { fetchData('/move', { direction: dir }); }
             }
         });
 
-        // Dynamic Restart Button
-        document.getElementById("restart-btn").addEventListener("click", () => {
-            let sizeVal = parseInt(document.getElementById("grid-size-input").value) || 4;
-            
-            // Limit size between 3 and 10 to stop the browser from crashing
-            if(sizeVal < 3) sizeVal = 3;
-            if(sizeVal > 10) sizeVal = 10;
-            document.getElementById("grid-size-input").value = sizeVal;
-
-            gameStarted = true; 
-            gridBuilt = false; // Forces the HTML to delete and rebuild the grid cells
-            roverLayer.style.display = "none"; 
-            statusText.innerText = "Rebooting System...";
-            
-            fetchData('/start', { size: sizeVal });
-        });
+        document.getElementById("restart-btn").addEventListener("click", sendStartRequest);
 
         function fetchData(route, payload) {
             fetch(route, {
@@ -267,15 +270,15 @@
         }
 
         function processGameData(data) {
-            let size = data.grid_size;
+            let rows = data.grid_rows;
+            let cols = data.grid_cols;
             
             if (!gridBuilt) {
-                buildGrid(size);
+                buildGrid(rows, cols);
                 roverLayer.style.display = "block";
                 gridBuilt = true;
             }
 
-            // Update Dashboard Metrics
             valLocation.innerText = `[${data.rover_pos[0]}, ${data.rover_pos[1]}]`;
             valInference.innerText = data.inference_steps.toLocaleString(); 
             
@@ -284,25 +287,27 @@
             if (data.percepts.stench) perceptList.push("Stench 🤢");
             valPercepts.innerText = perceptList.length > 0 ? perceptList.join(", ") : "None";
 
-            // Update Status Console
             if (data.status === "dead_pit") statusText.innerHTML = "<span class='danger'>CRITICAL: Fell into a Pit! 🕳️</span>";
             else if (data.status === "dead_wumpus") statusText.innerHTML = "<span class='danger'>CRITICAL: Eaten by Wumpus! 👽</span>";
             else if (data.status === "won") statusText.innerHTML = "<span class='victory'>SUCCESS: Gold Acquired! 🏆 YOU WIN!</span>";
             else statusText.innerText = `System Online. Exploring...`;
 
-            animateRover(data.rover_pos[0], data.rover_pos[1], data.direction);
-            updateCells(data, size);
+            updateCells(data, rows, cols);
+            // Must wait a brief moment for DOM to paint cells before grabbing offset for rover
+            setTimeout(() => {
+                animateRover(data.rover_pos[0], data.rover_pos[1], data.direction);
+            }, 50);
         }
 
-        function buildGrid(size) {
+        function buildGrid(rows, cols) {
             gridEl.innerHTML = "";
-            gridEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
-            gridEl.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+            gridEl.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+            gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
-            for (let r = 0; r < size; r++) {
-                for (let c = 0; c < size; c++) {
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
                     let cell = document.createElement("div");
-                    cell.className = "cell"; // Default is Gray Unvisited
+                    cell.className = "cell"; 
                     cell.id = `cell-${r}-${c}`;
                     
                     let fog = document.createElement("div");
@@ -322,19 +327,33 @@
 
         function animateRover(r, c, direction) {
             let targetCell = document.getElementById(`cell-${r}-${c}`);
-            if (targetCell) {
-                roverLayer.style.width = `${targetCell.offsetWidth}px`;
-                roverLayer.style.height = `${targetCell.offsetHeight}px`;
-                roverLayer.style.transform = `translate(${targetCell.offsetLeft}px, ${targetCell.offsetTop}px)`;
+            let gridContainer = document.getElementById("grid");
+            
+            if (targetCell && gridContainer) {
+                // Get exact pixel coordinates on the screen
+                let cellRect = targetCell.getBoundingClientRect();
+                let gridRect = gridContainer.getBoundingClientRect();
+                
+                // Calculate precise distance from the edge of the grid
+                let offsetX = cellRect.left - gridRect.left;
+                let offsetY = cellRect.top - gridRect.top;
+                
+                // Add the grid's position inside the container to align it
+                let finalX = offsetX + gridContainer.offsetLeft;
+                let finalY = offsetY + gridContainer.offsetTop;
+                
+                // Snap rover perfectly to the target cell's dimensions
+                roverLayer.style.width = `${cellRect.width}px`;
+                roverLayer.style.height = `${cellRect.height}px`;
+                roverLayer.style.transform = `translate(${finalX}px, ${finalY}px)`;
                 roverImg.src = `/static/images/marsrover_${direction}.png`;
             }
         }
-
-        function updateCells(data, size) {
+        function updateCells(data, rows, cols) {
             let isGameOver = (data.status !== "playing");
 
-            for (let r = 0; r < size; r++) {
-                for (let c = 0; c < size; c++) {
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
                     let cell = document.getElementById(`cell-${r}-${c}`);
                     let fog = document.getElementById(`fog-${r}-${c}`);
                     let content = document.getElementById(`content-${r}-${c}`);
@@ -343,17 +362,15 @@
                     let isSafe = data.safe_cells.some(v => v[0] === r && v[1] === c);
                     let isConfirmedHazard = data.confirmed_hazards.some(v => v[0] === r && v[1] === c);
 
-                    // Apply strict assignment colors
-                    cell.className = "cell"; // Reset classes
+                    cell.className = "cell"; 
                     if (isVisited) {
                         cell.classList.add("visited");
                     } else if (isConfirmedHazard || (isGameOver && (data.hazards[r][c].p || data.hazards[r][c].w))) {
-                        cell.classList.add("hazard"); // Turns RED
+                        cell.classList.add("hazard"); 
                     } else if (isSafe) {
-                        cell.classList.add("safe"); // Turns GREEN
+                        cell.classList.add("safe"); 
                     }
 
-                    // Reveal Fog
                     if (isVisited || isGameOver || isConfirmedHazard) {
                         fog.style.opacity = "0"; 
 
@@ -361,12 +378,10 @@
                             let cellData = data.hazards[r][c];
                             let html = "";
                             
-                            // Inject Images
                             if (cellData.p) html += `<img src="/static/images/pit.png" class="hazard-img" style="z-index:1;">`;
                             if (cellData.w) html += `<img src="/static/images/wumpus.png" class="hazard-img" style="z-index:2;">`;
                             if (cellData.g) html += `<img src="/static/images/gold.png" class="hazard-img gold-img">`; 
                             
-                            // Inject Percept Text
                             let textStr = "";
                             if (cellData.b) textStr += "💨 BREEZE<br>";
                             if (cellData.s) textStr += "🤢 STENCH";

@@ -11,7 +11,8 @@ game_state = {
     "rover_c": 0,
     "direction": "right",
     "status": "playing", 
-    "size": 4
+    "rows": 4,
+    "cols": 4
 }
 
 @app.route('/')
@@ -20,14 +21,16 @@ def index():
 
 @app.route('/start', methods=['POST'])
 def start_game():
-    # Grab the size from the frontend, default to 4 if missing
-    requested_size = request.json.get('size', 4)
-    game_state["size"] = int(requested_size)
-    size = game_state["size"]
+    # Grab separate rows and cols from frontend, default to 4 if missing
+    game_state["rows"] = int(request.json.get('rows', 4))
+    game_state["cols"] = int(request.json.get('cols', 4))
     
-    # Generate the world dynamically with the new size
-    game_state["world"] = WumpusWorld(size, size)
-    game_state["agent"] = WumpusAgent(size, size)
+    rows = game_state["rows"]
+    cols = game_state["cols"]
+    
+    # Generate the world dynamically with custom Rows x Cols
+    game_state["world"] = WumpusWorld(rows, cols)
+    game_state["agent"] = WumpusAgent(rows, cols)
     game_state["rover_r"] = 0
     game_state["rover_c"] = 0
     game_state["direction"] = "right"
@@ -48,10 +51,11 @@ def move():
     game_state["direction"] = direction
     r, c = game_state["rover_r"], game_state["rover_c"]
     
+    # Use rows and cols for boundary limits
     if direction == "up" and r > 0: r -= 1
-    elif direction == "down" and r < game_state["size"] - 1: r += 1
+    elif direction == "down" and r < game_state["rows"] - 1: r += 1
     elif direction == "left" and c > 0: c -= 1
-    elif direction == "right" and c < game_state["size"] - 1: c += 1
+    elif direction == "right" and c < game_state["cols"] - 1: c += 1
     
     game_state["rover_r"] = r
     game_state["rover_c"] = c
@@ -64,7 +68,6 @@ def process_turn():
     agent = game_state["agent"]
     r, c = game_state["rover_r"], game_state["rover_c"]
     
-    # Check exact cause of death or victory
     cell = world.grid[r][c]
     if cell["p"]: game_state["status"] = "dead_pit"
     elif cell["w"]: game_state["status"] = "dead_wumpus"
@@ -84,14 +87,14 @@ def process_turn():
                 if (nr, nc) not in safe_cells:
                     safe_cells.append((nr, nc))
             else:
-                # If not safe, ask the agent if it's DEFINITELY a hazard
                 is_pit = agent.prove(f"p{nr}{nc}")
                 is_wumpus = agent.prove(f"w{nr}{nc}")
                 if is_pit or is_wumpus:
                     confirmed_hazards.append((nr, nc))
 
     return jsonify({
-        "grid_size": world.row,
+        "grid_rows": world.row,
+        "grid_cols": world.col,
         "rover_pos": [r, c],
         "direction": game_state["direction"],
         "visited": list(agent.visited),
