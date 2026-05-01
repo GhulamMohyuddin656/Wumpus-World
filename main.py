@@ -4,14 +4,13 @@ from wumpusagent import WumpusAgent
 
 app = Flask(__name__)
 
-# Global state to hold our game
 game_state = {
     "world": None,
     "agent": None,
     "rover_r": 0,
     "rover_c": 0,
     "direction": "right",
-    "status": "playing", # playing, dead, won
+    "status": "playing", 
     "size": 4
 }
 
@@ -29,7 +28,6 @@ def start_game():
     game_state["direction"] = "right"
     game_state["status"] = "playing"
     
-    # Prove 0,0 is safe
     game_state["agent"].tell("p", 0, 0, False)
     game_state["agent"].tell("w", 0, 0, False)
     game_state["agent"].visited.add((0,0))
@@ -38,7 +36,7 @@ def start_game():
 
 @app.route('/move', methods=['POST'])
 def move():
-    if game_state["status"] != "playing":
+    if "dead" in game_state["status"] or game_state["status"] == "won":
         return process_turn()
 
     direction = request.json.get('direction')
@@ -61,26 +59,30 @@ def process_turn():
     agent = game_state["agent"]
     r, c = game_state["rover_r"], game_state["rover_c"]
     
-    # 1. Did we die or win?
     cell = world.grid[r][c]
-    if cell["p"] or cell["w"]:
-        game_state["status"] = "dead"
-    elif cell["g"]:
-        game_state["status"] = "won"
+    if cell["p"]: game_state["status"] = "dead_pit"
+    elif cell["w"]: game_state["status"] = "dead_wumpus"
+    elif cell["g"]: game_state["status"] = "won"
         
-    # 2. Get Percepts and Update Agent Notebook
     percepts = world.get_percepts(r, c)
     agent.tell('b', r, c, percepts["breeze"])
     agent.tell('s', r, c, percepts["stench"])
     
-    # 3. Ask about neighbors
     safe_cells = list(agent.safe_known)
+    confirmed_hazards = [] # NEW: Find hazards to highlight Red
+    
     for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
         nr, nc = r + dr, c + dc
         if 0 <= nr < world.row and 0 <= nc < world.col:
             if agent.ask_is_safe(nr, nc):
                 if (nr, nc) not in safe_cells:
                     safe_cells.append((nr, nc))
+            else:
+                # If not safe, ask the agent if it's DEFINITELY a hazard
+                is_pit = agent.prove(f"p{nr}{nc}")
+                is_wumpus = agent.prove(f"w{nr}{nc}")
+                if is_pit or is_wumpus:
+                    confirmed_hazards.append((nr, nc))
 
     return jsonify({
         "grid_size": world.row,
@@ -88,9 +90,11 @@ def process_turn():
         "direction": game_state["direction"],
         "visited": list(agent.visited),
         "safe_cells": safe_cells,
+        "confirmed_hazards": confirmed_hazards,
         "percepts": percepts,
+        "inference_steps": agent.inference_steps,
         "status": game_state["status"],
-        "hazards": world.grid # We only use this to reveal everything if game ends
+        "hazards": world.grid 
     })
 
 if __name__ == '__main__':

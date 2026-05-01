@@ -2,96 +2,215 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Wumpus World</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wumpus World: Agent Dashboard</title>
     <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #f8fafc;
+            --color-unvisited: #64748b; /* GRAY per assignment */
+            --color-safe: #22c55e;      /* GREEN per assignment */
+            --color-hazard: #ef4444;    /* RED per assignment */
+            --color-visited: #cbd5e1;
+        }
+
         body {
-            background-color: #222;
-            color: white;
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
-        h1 { margin-bottom: 5px; }
-        #status { font-size: 24px; font-weight: bold; height: 30px; margin-bottom: 20px;}
+
+        /* Metrics Dashboard Styling */
+        #dashboard {
+            background-color: var(--panel-bg);
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            flex: 1 1 300px;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border: 1px solid #334155;
+        }
+
+        #dashboard h1 { margin: 0 0 10px 0; font-size: 24px; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; }
         
+        .metric-box {
+            background-color: #0f172a;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #38bdf8;
+        }
+        
+        .metric-title { font-size: 12px; color: #94a3b8; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
+        .metric-value { font-size: 18px; font-weight: bold; }
+        
+        #status-text { font-size: 16px; font-weight: bold; padding: 10px; border-radius: 8px; background: #334155; text-align: center; }
+        .danger { color: #f87171; }
+        .victory { color: #fbbf24; }
+
+        /* Grid Container Styling for Dynamic Resizing */
+        #game-container {
+            position: relative;
+            flex: 2 1 400px;
+            max-width: 700px;
+            width: 100%;
+            aspect-ratio: 1 / 1; 
+            background-color: var(--panel-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+            border: 1px solid #334155;
+        }
+
         #grid {
             display: grid;
-            grid-template-columns: repeat(4, 150px);
-            grid-template-rows: repeat(4, 150px);
-            gap: 5px;
-            background-color: #444;
-            padding: 10px;
-            border-radius: 10px;
-        }
-        .cell {
-            background-color: #555;
+            width: 100%;
+            height: 100%;
+            gap: 6px;
             position: relative;
+        }
+
+        /* Cell Styling & Colors based on Assignment */
+        .cell {
+            background-color: var(--color-unvisited); /* UNVISITED GRAY */
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+            transition: background-color 0.3s ease;
+        }
+
+        .safe { background-color: var(--color-safe); } /* SAFE GREEN */
+        .hazard { background-color: var(--color-hazard) !important; } /* CONFIRMED RED */
+        .visited { background-color: var(--color-visited); }
+
+        .fog {
+            background-image: url('/static/images/fog.png');
+            background-size: cover;
+            background-position: center;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 10;
+            transition: opacity 0.8s ease-in-out; 
+            opacity: 1; 
+        }
+
+        .cell-content {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            color: black;
-            border-radius: 5px;
-            overflow: hidden; /* Stops anything from spilling out */
-        }
-        
-        /* Fixes Image Sizing and Centering */
-        .cell img {
-            width: 80%;     /* Leaves a nice 10% margin inside the box */
-            height: 80%;
-            object-fit: contain; /* Prevents stretching, keeps aspect ratio */
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%); /* Dead center alignment */
+            z-index: 5;
         }
 
-        .fog {
-            background-image: url('/static/images/fog.png');
-            background-size: 100% 100%; /* Forces fog to stretch over the whole cell */
-            background-position: center;
-            z-index: 10;
-            width: 100%;
-            height: 100%;
+        .hazard-img {
+            width: 90%; height: 90%;
+            object-fit: contain;
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 5%; left: 5%;
         }
-        
-        /* Color coding */
-        .safe { background-color: #6aaa64; } /* Green */
-        .visited { background-color: #d3d3d3; } /* Light gray */
-        
-        /* Text formatting so it looks clean under the images */
+
+        .gold-img { z-index: 30 !important; filter: drop-shadow(0 0 12px gold); }
+
         .percept-text {
             position: absolute;
-            bottom: 2px;
+            bottom: 4px;
             text-align: center;
+            font-size: clamp(10px, 1.5vw, 14px); /* Scales font dynamically */
+            font-weight: bold;
+            background-color: rgba(15, 23, 42, 0.9);
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 6px;
             z-index: 25;
-            font-size: 12px;
-            background-color: rgba(255, 255, 255, 0.7); /* White tint behind text */
-            padding: 2px 6px;
-            border-radius: 4px;
-            line-height: 1.2;
+        }
+
+        /* Floating Rover Layer */
+        #rover-layer {
+            position: absolute;
+            top: 15px; left: 15px; /* Offset to match container padding */
+            z-index: 20; 
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); 
+            display: none; 
+            pointer-events: none; 
+        }
+        
+        #rover-layer img {
+            width: 90%; height: 90%;
+            object-fit: contain;
+            position: absolute;
+            top: 5%; left: 5%;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
         }
     </style>
 </head>
 <body>
 
-    <h1>Mars Rover: Wumpus World</h1>
-    <div id="status">Press any arrow key to Start</div>
-    <div id="grid"></div>
+    <div id="dashboard">
+        <h1>Wumpus Agent</h1>
+        <div id="status-text">Awaiting Init... (Press Arrow Key)</div>
+        
+        <div class="metric-box">
+            <div class="metric-title">Agent Location</div>
+            <div class="metric-value" id="val-location">[0, 0]</div>
+        </div>
+
+        <div class="metric-box" style="border-left-color: #f59e0b;">
+            <div class="metric-title">Current Percepts</div>
+            <div class="metric-value" id="val-percepts">None</div>
+        </div>
+
+        <div class="metric-box" style="border-left-color: #8b5cf6;">
+            <div class="metric-title">Resolution Inference Steps</div>
+            <div class="metric-value" id="val-inference">0</div>
+        </div>
+        
+        <div class="metric-title" style="margin-top: 10px;">Legend</div>
+        <div style="font-size: 13px; display: flex; flex-direction: column; gap: 5px;">
+            <div><span style="display:inline-block; width:12px; height:12px; background:var(--color-safe); border-radius:3px;"></span> Safe</div>
+            <div><span style="display:inline-block; width:12px; height:12px; background:var(--color-unvisited); border-radius:3px;"></span> Unvisited / Unknown</div>
+            <div><span style="display:inline-block; width:12px; height:12px; background:var(--color-hazard); border-radius:3px;"></span> Confirmed Hazard</div>
+        </div>
+    </div>
+    
+    <div id="game-container">
+        <div id="grid"></div>
+        <div id="rover-layer"><img id="rover-img" src=""></div>
+    </div>
 
     <script>
         const gridEl = document.getElementById("grid");
-        const statusEl = document.getElementById("status");
+        const statusText = document.getElementById("status-text");
+        const valLocation = document.getElementById("val-location");
+        const valPercepts = document.getElementById("val-percepts");
+        const valInference = document.getElementById("val-inference");
+        
+        const roverLayer = document.getElementById("rover-layer");
+        const roverImg = document.getElementById("rover-img");
+        
         let gameStarted = false;
+        let gridBuilt = false;
+        let lastKnownData = null;
 
-        // Listen for Arrow Keys
+        // Dynamic resizing correction for Rover
+        window.addEventListener('resize', () => {
+            if (lastKnownData) animateRover(lastKnownData.rover_pos[0], lastKnownData.rover_pos[1], lastKnownData.direction);
+        });
+
         window.addEventListener("keydown", function(e) {
             if(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
                 e.preventDefault();
@@ -113,61 +232,122 @@
                 body: JSON.stringify(payload)
             })
             .then(res => res.json())
-            .then(data => drawGrid(data));
+            .then(data => {
+                lastKnownData = data;
+                processGameData(data);
+            });
         }
 
-        function drawGrid(data) {
-            gridEl.innerHTML = "";
+        function processGameData(data) {
             let size = data.grid_size;
             
-            // Update Status text
-            if(data.status === "dead") statusEl.innerHTML = "<span style='color:red;'>You Died! (Refresh to restart)</span>";
-            else if(data.status === "won") statusEl.innerHTML = "<span style='color:gold;'>You Found the Gold! YOU WIN!</span>";
-            else statusEl.innerText = "Exploring... (Use Arrow Keys)";
+            if (!gridBuilt) {
+                buildGrid(size);
+                roverLayer.style.display = "block";
+                gridBuilt = true;
+            }
+
+            // Update Dashboard Metrics
+            valLocation.innerText = `[${data.rover_pos[0]}, ${data.rover_pos[1]}]`;
+            valInference.innerText = data.inference_steps.toLocaleString(); // Formats large numbers nicely
+            
+            let perceptList = [];
+            if (data.percepts.breeze) perceptList.push("Breeze 💨");
+            if (data.percepts.stench) perceptList.push("Stench 🤢");
+            valPercepts.innerText = perceptList.length > 0 ? perceptList.join(", ") : "None";
+
+            // Update Status Console
+            if (data.status === "dead_pit") statusText.innerHTML = "<span class='danger'>CRITICAL: Fell into a Pit! 🕳️ (Refresh)</span>";
+            else if (data.status === "dead_wumpus") statusText.innerHTML = "<span class='danger'>CRITICAL: Eaten by Wumpus! 👽 (Refresh)</span>";
+            else if (data.status === "won") statusText.innerHTML = "<span class='victory'>SUCCESS: Gold Acquired! 🏆 YOU WIN!</span>";
+            else statusText.innerText = `System Online. Exploring...`;
+
+            animateRover(data.rover_pos[0], data.rover_pos[1], data.direction);
+            updateCells(data, size);
+        }
+
+        function buildGrid(size) {
+            gridEl.innerHTML = "";
+            gridEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+            gridEl.style.gridTemplateRows = `repeat(${size}, 1fr)`;
 
             for (let r = 0; r < size; r++) {
                 for (let c = 0; c < size; c++) {
-                    let cellDiv = document.createElement("div");
-                    cellDiv.className = "cell";
+                    let cell = document.createElement("div");
+                    cell.className = "cell"; // Default is Gray Unvisited
+                    cell.id = `cell-${r}-${c}`;
                     
+                    let fog = document.createElement("div");
+                    fog.className = "fog";
+                    fog.id = `fog-${r}-${c}`;
+                    
+                    let content = document.createElement("div");
+                    content.className = "cell-content";
+                    content.id = `content-${r}-${c}`;
+
+                    cell.appendChild(fog);
+                    cell.appendChild(content);
+                    gridEl.appendChild(cell);
+                }
+            }
+        }
+
+        function animateRover(r, c, direction) {
+            let targetCell = document.getElementById(`cell-${r}-${c}`);
+            if (targetCell) {
+                roverLayer.style.width = `${targetCell.offsetWidth}px`;
+                roverLayer.style.height = `${targetCell.offsetHeight}px`;
+                roverLayer.style.transform = `translate(${targetCell.offsetLeft}px, ${targetCell.offsetTop}px)`;
+                roverImg.src = `/static/images/marsrover_${direction}.png`;
+            }
+        }
+
+        function updateCells(data, size) {
+            let isGameOver = (data.status !== "playing");
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    let cell = document.getElementById(`cell-${r}-${c}`);
+                    let fog = document.getElementById(`fog-${r}-${c}`);
+                    let content = document.getElementById(`content-${r}-${c}`);
+
                     let isVisited = data.visited.some(v => v[0] === r && v[1] === c);
                     let isSafe = data.safe_cells.some(v => v[0] === r && v[1] === c);
-                    let isRoverHere = (data.rover_pos[0] === r && data.rover_pos[1] === c);
+                    let isConfirmedHazard = data.confirmed_hazards.some(v => v[0] === r && v[1] === c);
 
-                    // Add Fog if unexplored
-                    if (!isVisited && data.status === "playing") {
-                        let fogDiv = document.createElement("div");
-                        fogDiv.className = "fog";
-                        cellDiv.appendChild(fogDiv);
+                    // Apply strict assignment colors
+                    cell.className = "cell"; // Reset classes
+                    if (isVisited) {
+                        cell.classList.add("visited");
+                    } else if (isConfirmedHazard || (isGameOver && (data.hazards[r][c].p || data.hazards[r][c].w))) {
+                        cell.classList.add("hazard"); // Turns RED
+                    } else if (isSafe) {
+                        cell.classList.add("safe"); // Turns GREEN
                     }
 
-                    // Background color for explored/safe
-                    if (isVisited) cellDiv.classList.add("visited");
-                    else if (isSafe) cellDiv.classList.add("safe");
+                    // Reveal Fog
+                    if (isVisited || isGameOver || isConfirmedHazard) {
+                        fog.style.opacity = "0"; 
 
-                    // Show Hazards if game is over or cell is visited
-                    if (data.status !== "playing" || isVisited) {
-                        let cellData = data.hazards[r][c];
-                        if (cellData.p) cellDiv.innerHTML += `<img src="/static/images/pit.png" style="z-index:1;">`;
-                        if (cellData.w) cellDiv.innerHTML += `<img src="/static/images/wumpus.png" style="z-index:2;">`;
-                        if (cellData.g) cellDiv.innerHTML += `<img src="/static/images/gold.png" style="z-index:3;">`; 
-                        
-                        // Text overlays (under gold if gold is there)
-                        let textStr = "";
-                        if (cellData.b) textStr += "Breeze<br>";
-                        if (cellData.s) textStr += "Stench";
-                        if (textStr !== "") {
-                            cellDiv.innerHTML += `<div class="percept-text">${textStr}</div>`;
+                        if (content.innerHTML === "") {
+                            let cellData = data.hazards[r][c];
+                            let html = "";
+                            
+                            // Inject Images
+                            if (cellData.p) html += `<img src="/static/images/pit.png" class="hazard-img" style="z-index:1;">`;
+                            if (cellData.w) html += `<img src="/static/images/wumpus.png" class="hazard-img" style="z-index:2;">`;
+                            if (cellData.g) html += `<img src="/static/images/gold.png" class="hazard-img gold-img">`; 
+                            
+                            // Inject Percept Text
+                            let textStr = "";
+                            if (cellData.b) textStr += "💨 BREEZE<br>";
+                            if (cellData.s) textStr += "🤢 STENCH";
+                            if (textStr !== "") {
+                                html += `<div class="percept-text">${textStr}</div>`;
+                            }
+                            content.innerHTML = html;
                         }
                     }
-
-                    // Draw Rover over everything else
-                    if (isRoverHere) {
-                        let roverImg = data.direction; // up, down, left, right
-                        cellDiv.innerHTML += `<img src="/static/images/marsrover_${roverImg}.png" style="z-index:20;">`;
-                    }
-
-                    gridEl.appendChild(cellDiv);
                 }
             }
         }

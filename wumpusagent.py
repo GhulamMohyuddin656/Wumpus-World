@@ -5,6 +5,7 @@ class WumpusAgent:
         self.kb = []
         self.visited = set()
         self.safe_known = set([(0,0)])
+        self.inference_steps = 0  # NEW: Tracks resolution steps for the dashboard
         self.add_initial_rules()
 
     def add_initial_rules(self):
@@ -35,6 +36,7 @@ class WumpusAgent:
             self.kb.append(new_clause)
 
     def resolve(self, ci, cj):
+        self.inference_steps += 1 # NEW: Count every resolution attempt
         for literal in ci:
             complement = literal[1:] if literal.startswith("-") else "-" + literal
             if complement in cj:
