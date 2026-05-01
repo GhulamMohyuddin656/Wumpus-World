@@ -44,12 +44,12 @@ class WumpusWorld:
     def generate_percepts(self):
         for r in range(self.row):
             for c in range(self.col):
-                if self.grid[r][c]['p'] and (not self.grid[r][c]['w']):
-                    
+                if self.grid[r][c]['p']:
                     self.add_percept_to_neighbours(r,c,'b')
-                if not self.grid[r][c]['p'] and (self.grid[r][c]['w']):
+                if self.grid[r][c]['w']:
                     self.add_percept_to_neighbours(r,c,'s')
-    def add_percept_to_neighbour(self,r,c,type):
+
+    def add_percept_to_neighbours(self,r,c,type):
         for dr,dc in [(0,1),(0,-1),(1,0),(-1,0)]:
             nr,nc=r+dr,c+dc
             if 0<=nr<self.row and 0<=nc<self.col:
